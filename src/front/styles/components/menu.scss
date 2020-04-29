@@ -7,6 +7,10 @@
     box-shadow: none;
     padding-top: 1rem;
 
+    .label-wrap {
+        height: calc(100vh - 8rem);
+    }
+
     input {
         display: none;
     }

@@ -30,6 +30,7 @@ export const Menu: React.FunctionComponent<{
     ))
 
     return <div className='Menu'>
-        { inputs }
+        <div className='label-wrap'>{ inputs }</div>
+        <a href='https://github.com/comame/VOMS-Timeline' rel='noopener' target='_blank'>GitHub</a>
     </div>
 }
