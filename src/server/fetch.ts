@@ -5,8 +5,9 @@ export interface HTTPHeaders {
 }
 
 export interface FetchOptions {
-    method?: 'GET'
-    headers?: HTTPHeaders
+    method?: 'GET'|'POST'
+    headers?: HTTPHeaders,
+    body?: string
 }
 
 export async function fetch(url: string, option?: FetchOptions): Promise<Response> {
@@ -46,6 +47,10 @@ export async function fetch(url: string, option?: FetchOptions): Promise<Respons
         req.on('error', (err) => {
             reject(err)
         })
+
+        if (option?.body) {
+            req.write(option.body)
+        }
 
         req.end()
     })

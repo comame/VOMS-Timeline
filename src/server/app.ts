@@ -5,6 +5,7 @@ import { websubExpressHandler } from './websubExpressHandler'
 import { fetchVideo, searchVideos } from './fetchVideo'
 import { cacheResponse, getCached } from './cache'
 import { VideosResponse } from '../API/selfApiOptions/options'
+import { requestSubscription } from './requestSubscription'
 
 const app = express()
 let db: Db
@@ -46,6 +47,11 @@ app.get('/api/videos', async (req, res: Response<VideosResponse>) => {
     })
 
     if (Date.now() - 24 * 60 * 60 * 1000 / 5 >= lastFetch) {
+        console.log('RE-SUBSCRIPTION')
+        if (!await requestSubscription()) {
+            console.log('SOMETHING WENT WRONG IN SUBSCRIPTION')
+        }
+
         console.log('SEARCH VIDEOS')
         const videoIds = await searchVideos()
         if (videoIds.length == 0) {
