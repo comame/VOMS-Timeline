@@ -28,18 +28,12 @@ app.use((req, res, next) => {
 
 app.get('**', express.static(path.resolve(__dirname, '../front')))
 app.all('/sub/hook', async (req, res) => {
-    const videoId = await websubExpressHandler(req, res, db)
+    const videoId = await websubExpressHandler(req, res)
     if (!videoId) return
     const videos = await fetchVideo([ videoId ])
     if (videos?.length == 0 || typeof videos == 'undefined') return
 
     await cacheResponse(db, videos)
-})
-
-// @ts-ignore: req unused
-app.get('/sub/logs', async (req, res) => {
-    const data = await db.collection('subs-log').find().sort({ time: -1 }).limit(100).toArray()
-    res.send(JSON.stringify(data, void 0, 2))
 })
 
 // @ts-ignore: req unused
