@@ -21,7 +21,7 @@ export const Timeline: React.FunctionComponent<{
         return getVideoTime(b).getTime() - getVideoTime(a).getTime()
     }
 
-    const liveStreams = videos.filter(isVideoLive)
+    const liveStreams = videos.filter(isVideoLive).filter(channelFilterFunc).sort(sortByDateFunc)
 
     const upcomingStreams = videos.filter(video =>
         video.snippet?.liveBroadcastContent == 'upcoming' &&
