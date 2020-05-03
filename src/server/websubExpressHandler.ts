@@ -8,11 +8,12 @@ import { channels } from '../config/channels'
 export async function websubExpressHandler(req: Request, res: Response): Promise<Video['id']|undefined> {
     const queryObj = Object.fromEntries(req.originalUrl.split('?')[1]?.split('&').map(it => it.split('=')) ?? [])
 
-    const logRequest = async ( { queryObj, subscribeObject, result, rawBody = '' }: {
+    const logRequest = async ( { queryObj, subscribeObject, result, rawBody = '', reason = '' }: {
         queryObj?: object,
         subscribeObject?: object,
         result: number,
-        rawBody?: string
+        rawBody?: string,
+        reason?: string
     }) => {
         console.log({
             url: req.originalUrl,
@@ -23,7 +24,8 @@ export async function websubExpressHandler(req: Request, res: Response): Promise
             body: subscribeObject,
             headers: req.headers,
             result,
-            rawBody
+            rawBody,
+            reason
         })
     }
 
@@ -37,16 +39,24 @@ export async function websubExpressHandler(req: Request, res: Response): Promise
 
         if (!acceptTopics.includes(queryObj['hub.topic'])) {
             res.sendStatus(404)
-            await logRequest({ queryObj, result: 404 })
-        } else {
-            const challenge = queryObj['hub.challenge']
-            res.send(challenge)
-            await logRequest({ queryObj, result: 200 })
+            await logRequest({ queryObj, result: 404, reason: 'invalid_hub.topic' })
+            return
         }
+
+        const verifyToken = dotenv.WEBSUB_VERIFY_TOKEN
+        if (queryObj['verify_token'] != verifyToken) {
+            res.sendStatus(404)
+            await logRequest({ queryObj, result: 404, reason: 'invalid_verify_token' })
+            return
+        }
+
+        const challenge = queryObj['hub.challenge']
+        res.send(challenge)
+        await logRequest({ queryObj, result: 200 })
         return
     } else if (queryObj['hub.mode'] == 'unsubscribe') {
         res.sendStatus(404)
-        await logRequest({ queryObj, result: 404 })
+        await logRequest({ queryObj, result: 404, reason: 'unsubscribe_forbidden' })
         return
     } else if (queryObj['hub.mode'] == 'denied') {
         res.send()
@@ -58,7 +68,7 @@ export async function websubExpressHandler(req: Request, res: Response): Promise
         const error = validateXml(req.body)
         console.error('VALIDATE ERROR', error)
         res.status(500).send('error')
-        await logRequest({ subscribeObject: req.body, result: 500, rawBody: req.body })
+        await logRequest({ result: 500, rawBody: req.body, reason: 'invalid_xml' })
         return
     }
 
@@ -69,8 +79,14 @@ export async function websubExpressHandler(req: Request, res: Response): Promise
     if (hmacDigest != requestedHmacDigest) {
         console.error('Invalid digest request', 'wants: ' + hmacDigest, 'got: ' + requestedHmacDigest)
         res.send('ok')
-        await logRequest({ subscribeObject: req.body, result: 200500, rawBody: req.body })
+        await logRequest({ result: 200, rawBody: req.body, reason: 'invalid_digest' })
         return
+    }
+
+    const verifyToken = dotenv.WEBSUB_VERIFY_TOKEN
+    if (queryObj['verify_token'] != verifyToken) {
+        res.send('ok')
+        await logRequest({ result: 200, rawBody: req.body, reason: 'invalid_verify_token'})
     }
 
     res.send('ok')
