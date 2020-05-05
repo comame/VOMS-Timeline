@@ -47,8 +47,8 @@ app.get('/api/videos', async (req, res: Response<VideosResponse>) => {
     })
 
     const outdatedUpcomingVideoIds = videos.filter(video => (
-        video.item.snippet?.liveBroadcastContent == 'upcoming' &&
-        Date.now() - 5 * 60 * 1000 /* 5 mins */ >= video.fetched
+        [ 'upcoming', 'live' ].includes(video.item.snippet?.liveBroadcastContent!!) &&
+        Date.now() - 15 * 60 * 1000 /* 15 mins */ >= video.fetched
     )).map(video => video.item.id)
     console.log('OUTDATED UPCOMINGS', outdatedUpcomingVideoIds)
     const updatedUpcomingVideos = await fetchVideo(outdatedUpcomingVideoIds) ?? []
