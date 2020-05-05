@@ -37,6 +37,9 @@ app.all('/sub/hook', async (req, res) => {
     await cacheResponse(db, videos)
 })
 
+let isYouTubeApiSearching: boolean = false
+let isYouTubeApiRenewingVideo: boolean = false
+
 // @ts-ignore: req unused
 app.get('/api/videos', async (req, res: Response<VideosResponse>) => {
     const { videos, lastUpdated, lastFetch } = await getCached(db)
@@ -46,28 +49,45 @@ app.get('/api/videos', async (req, res: Response<VideosResponse>) => {
         lastUpdated: new Date(lastUpdated).toISOString()
     })
 
-    const outdatedUpcomingVideoIds = videos.filter(video => (
-        [ 'upcoming', 'live' ].includes(video.item.snippet?.liveBroadcastContent!!) &&
-        Date.now() - 15 * 60 * 1000 /* 15 mins */ >= video.fetched
-    )).map(video => video.item.id)
-    console.log('OUTDATED UPCOMINGS', outdatedUpcomingVideoIds)
-    const updatedUpcomingVideos = await fetchVideo(outdatedUpcomingVideoIds) ?? []
-    await cacheResponse(db, updatedUpcomingVideos)
-
     if (Date.now() - 24 * 60 * 60 * 1000 / 5 /* 5 times per day */ >= lastFetch) {
+        console.log('SEARCH VIDEOS')
+        if (!isYouTubeApiSearching) {
+            isYouTubeApiSearching = true
+            try {
+                const videoIds = await searchVideos()
+                if (videoIds.length == 0) {
+                    return
+                }
+                const videos = await fetchVideo(videoIds)
+                if (videos?.length == 0 || typeof videos == 'undefined') return
+                await cacheResponse(db, videos, Date.now())
+                console.log('DONE')
+            } finally {
+                isYouTubeApiSearching = false
+            }
+        } else {
+            console.log('SKIP')
+        }
+
         console.log('RE-SUBSCRIPTION')
         if (!await requestSubscription()) {
             console.log('SOMETHING WENT WRONG IN SUBSCRIPTION')
         }
+    }
 
-        console.log('SEARCH VIDEOS')
-        const videoIds = await searchVideos()
-        if (videoIds.length == 0) {
-            return
+    if (!isYouTubeApiRenewingVideo) {
+        isYouTubeApiRenewingVideo = true
+        try {
+            const outdatedUpcomingVideoIds = videos.filter(video => (
+                [ 'upcoming', 'live' ].includes(video.item.snippet?.liveBroadcastContent!!) &&
+                Date.now() - 15 * 60 * 1000 /* 15 mins */ >= video.fetched
+            )).map(video => video.item.id)
+            console.log('OUTDATED UPCOMINGS', outdatedUpcomingVideoIds)
+            const updatedUpcomingVideos = await fetchVideo(outdatedUpcomingVideoIds) ?? []
+            await cacheResponse(db, updatedUpcomingVideos)
+        } finally {
+            isYouTubeApiRenewingVideo = false
         }
-        const videos = await fetchVideo(videoIds)
-        if (videos?.length == 0 || typeof videos == 'undefined') return
-        await cacheResponse(db, videos, Date.now())
     }
 })
 
