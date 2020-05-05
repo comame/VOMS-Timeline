@@ -87,6 +87,7 @@ export async function websubExpressHandler(req: Request, res: Response): Promise
     if (queryObj['verify_token'] != verifyToken) {
         res.send('ok')
         await logRequest({ result: 200, rawBody: req.body, reason: 'invalid_verify_token'})
+        return
     }
 
     res.send('ok')

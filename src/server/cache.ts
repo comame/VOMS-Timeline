@@ -48,7 +48,7 @@ export async function cacheResponse(db: Db, videos: Video[], lastFetch?: number)
 export async function getCached(db: Db, limit: number = 50): Promise<{
     lastUpdated: number,
     lastFetch: number,
-    videos: Video[]
+    videos: Array<{ item: Video, fetched: number }>
 }> {
     const metadataCollection: Collection<CacheMeta> = db.collection('metadata')
     const videosCollection: Collection<VideoCache> = db.collection('videos')
@@ -59,7 +59,7 @@ export async function getCached(db: Db, limit: number = 50): Promise<{
         .limit(limit)
         .toArray()
 
-    const videos = videoCaches.map(it => it.item)
+    const videos = videoCaches.map(it => ({ item: it.item, fetched: it.update }))
     const lastUpdated = cacheMetadata?.lastUpdated ?? 0
     const lastFetch = cacheMetadata?.lastFetch ?? 0
 
