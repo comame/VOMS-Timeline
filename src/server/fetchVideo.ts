@@ -7,6 +7,8 @@ import { SearchAPIOptions, isSearchAPIResponse, SearchAPIResponse } from '../API
 import { channels } from '../config/channels'
 
 export async function fetchVideo(videoIds: string[]): Promise<Video[]|undefined> {
+    if (videoIds.length == 0) return []
+
     const options: VideoAPIOptions = {
         part: ['id', 'snippet', 'liveStreamingDetails' ],
         id: videoIds,
