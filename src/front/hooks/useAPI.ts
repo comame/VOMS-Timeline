@@ -12,6 +12,10 @@ export function useFetchVideos(): {
     const [ willFetch, setWillFetch ] = useState<boolean>(true)
     const [ isFetching, setIsFetching ] = useState<boolean>(false)
 
+    const updateUpcomingStreams = () => {
+        setWillFetch(prev => !prev)
+    }
+
     const fetchUpcomingStreams = async () => {
         setIsFetching(true)
         const res = await fetch(endpoints.videos)
@@ -23,6 +27,14 @@ export function useFetchVideos(): {
             return
         }
         const videos = videosResponse.items
+        const willUpdate = videosResponse.willUpdate
+
+        if (willUpdate) {
+            console.log('will update')
+            setTimeout(() => {
+                updateUpcomingStreams()
+            }, 1000)
+        }
 
         setVideos([ ...videos ])
         setIsFetching(false)
@@ -31,10 +43,6 @@ export function useFetchVideos(): {
     useEffect(() => {
         fetchUpcomingStreams()
     }, [ willFetch ])
-
-    const updateUpcomingStreams = () => {
-        setWillFetch(prev => !prev)
-    }
 
     return { videos, updateVideos: updateUpcomingStreams, isFetching }
 }

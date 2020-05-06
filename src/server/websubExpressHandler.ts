@@ -8,7 +8,7 @@ import { channels } from '../config/channels'
 export async function websubExpressHandler(req: Request, res: Response): Promise<Video['id']|undefined> {
     const queryObj = Object.fromEntries(req.originalUrl.split('?')[1]?.split('&').map(it => it.split('=')) ?? [])
 
-    const logRequest = async ( { queryObj, subscribeObject, result, rawBody = '', reason = '' }: {
+    const logRequest = async ( { result, reason = '' }: {
         queryObj?: object,
         subscribeObject?: object,
         result: number,
@@ -17,14 +17,8 @@ export async function websubExpressHandler(req: Request, res: Response): Promise
     }) => {
         console.log({
             url: req.originalUrl,
-            query: Object.fromEntries(Object.entries(queryObj ?? {}).map(it => {
-                return [ (it[0] as string).replace(/\./g, '_'), it[1] ]
-            })),
             method: req.method,
-            body: subscribeObject,
-            headers: req.headers,
             result,
-            rawBody,
             reason
         })
     }

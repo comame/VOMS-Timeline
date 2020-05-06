@@ -4,7 +4,8 @@ import { DateString } from '../../util/DateString'
 export interface VideosResponse {
     kind: 'voms-timeline.comame.xyz#videosResponse'
     items: Video[]
-    lastUpdated: DateString
+    lastUpdated: DateString,
+    willUpdate: boolean
 }
 
 export function isVideosResponse(arg: any): arg is VideosResponse {
