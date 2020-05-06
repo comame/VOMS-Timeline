@@ -1,5 +1,5 @@
 import { Thumbnails } from './Thumbnails'
-import { DateString } from '../../util/DateString';
+import { DateString } from '../../util/DateString'
 
 export interface VideoAPIOptions {
     part: Array<'id'|'snippet'|'contentDetails'|'liveStreamingDetails'|'player'|'status'>

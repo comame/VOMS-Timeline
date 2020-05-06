@@ -1,5 +1,5 @@
-import { Video } from "../API/YouTubeApiOptions/VideosAPIOptions";
-import { asDate } from "./DateString";
+import { Video } from '../API/YouTubeApiOptions/VideosAPIOptions'
+import { asDate } from './DateString'
 
 export function getVideoTime(video: Video): Date {
     if (video.liveStreamingDetails?.actualEndTime) {

@@ -1,6 +1,6 @@
 import { Db, Collection } from 'mongodb'
-import { Video } from "../API/YouTubeApiOptions/VideosAPIOptions";
-import { getVideoTime } from '../util/videoTime';
+import { Video } from '../API/YouTubeApiOptions/VideosAPIOptions'
+import { getVideoTime } from '../util/videoTime'
 
 interface CacheMeta {
     lastUpdated: number,

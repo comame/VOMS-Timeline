@@ -1,4 +1,4 @@
-import { Video } from "../API/YouTubeApiOptions/VideosAPIOptions";
+import { Video } from '../API/YouTubeApiOptions/VideosAPIOptions'
 
 export function isVideoLive(video: Video): boolean {
     if (
