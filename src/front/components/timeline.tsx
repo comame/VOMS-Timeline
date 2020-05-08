@@ -17,20 +17,22 @@ export const Timeline: React.FunctionComponent<{
         return enable
     }
 
-    const sortByDateFunc = (a: Video, b: Video) => {
-        return getVideoTime(b).getTime() - getVideoTime(a).getTime()
+    const sortByDateFunc = (asc: boolean = false) => (a: Video, b: Video) => {
+        const timeA = getVideoTime(a).getTime()
+        const timeB = getVideoTime(b).getTime()
+        return asc ? timeA - timeB : timeB - timeA
     }
 
-    const liveStreams = videos.filter(isVideoLive).filter(channelFilterFunc).sort(sortByDateFunc)
+    const liveStreams = videos.filter(isVideoLive).filter(channelFilterFunc).sort(sortByDateFunc())
 
     const upcomingStreams = videos.filter(video =>
         video.snippet?.liveBroadcastContent == 'upcoming' &&
         !isVideoLive(video)
-    ).filter(channelFilterFunc).sort(sortByDateFunc)
+    ).filter(channelFilterFunc).sort(sortByDateFunc(true))
 
     const uploads = videos.filter(video =>
         video.snippet?.liveBroadcastContent == ('none' || void 0)
-    ).filter(channelFilterFunc).sort(sortByDateFunc)
+    ).filter(channelFilterFunc).sort(sortByDateFunc())
 
     return <div className='Timeline'>
         <h2>配信中</h2>
