@@ -30,7 +30,7 @@ app.use((req, res, next) => {
 app.get('**', express.static(path.resolve(__dirname, '../front')))
 app.get('/sub/hook', (req, res) => {
     const query = Object.fromEntries(req.originalUrl.split('?')[1]?.split('&').map(it => it.split('=')) ?? [])
-    const verified = verifySubscription(query['hub.mode'], query['hub.topic'])
+    const verified = verifySubscription(query['hub.mode'], query['hub.topic'], Number.parseInt(query['hub.lease_seconds']))
     if (verified) {
         res.send(query['hub.challenge'])
     } else {

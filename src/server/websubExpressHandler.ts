@@ -26,7 +26,7 @@ export function obtainVideoIdFromNotification(signature: string, body: string): 
     return updatedVideoId
 }
 
-export function verifySubscription(mode: string, topic: string): boolean {
+export function verifySubscription(mode: string, topic: string, leaseSeconds: number): boolean {
     if (mode == 'subscribe') {
         const acceptChannelIds = Object.entries(channels).map(it => it[1])
         const acceptTopics = acceptChannelIds.map(id =>
@@ -35,8 +35,15 @@ export function verifySubscription(mode: string, topic: string): boolean {
                 .replace(/\=/g, '%3D')
         )
         if (!acceptTopics.includes(topic)) {
+            console.log('Denied WebSub Verification Request (mode: subscribe): invalid topic', topic)
             return false
         }
+
+        if (Number.isNaN(leaseSeconds) || leaseSeconds < 432000 / 2) {
+            console.log('Denied WebSub Verification Request (mode: subscribe): invalid leaseSeconds', leaseSeconds)
+            return false
+        }
+
         console.log('Accepted WebSub Verification Request (mode: subscribe)', topic)
         return true
     } else if (mode == 'unsubscribe') {
