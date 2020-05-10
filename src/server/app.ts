@@ -1,7 +1,7 @@
 import path from 'path'
 import express, { Response } from 'express'
 import { MongoClient, Db } from 'mongodb'
-import { websubExpressHandler } from './websubExpressHandler'
+import { obtainVideoIdFromNotification, verifySubscription } from './websubExpressHandler'
 import { fetchVideo, searchVideos } from './fetchVideo'
 import { cacheResponse, getCached } from './cache'
 import { VideosResponse } from '../API/selfApiOptions/options'
@@ -28,8 +28,18 @@ app.use((req, res, next) => {
 })
 
 app.get('**', express.static(path.resolve(__dirname, '../front')))
-app.all('/sub/hook', async (req, res) => {
-    const videoId = await websubExpressHandler(req, res)
+app.get('/sub/hook', (req, res) => {
+    const query = Object.fromEntries(req.originalUrl.split('?')[1]?.split('&').map(it => it.split('=')) ?? [])
+    const verified = verifySubscription(query['hub.mode'], query['hub.topic'])
+    if (verified) {
+        res.send(query['hub.challenge'])
+    } else {
+        res.sendStatus(404)
+    }
+})
+app.post('/sub/hook', async (req, res) => {
+    res.send()
+    const videoId = obtainVideoIdFromNotification(req.header('x-hub-signature') ?? '', req.body)
     if (!videoId) return
     const videos = await fetchVideo([ videoId ]) ?? []
     await cacheResponse(db, videos)
@@ -64,7 +74,6 @@ app.get('/api/videos', async (req, res: Response<VideosResponse>) => {
         willUpdate: willSearchVideos || willRefetchOutdatedVideos || isYouTubeApiRenewingVideo || isYouTubeApiSearching
     })
 
-
     if (willSearchVideos) {
         isYouTubeApiSearching = true
         try {
@@ -72,7 +81,6 @@ app.get('/api/videos', async (req, res: Response<VideosResponse>) => {
             const videoIds = await searchVideos()
             const videos = await fetchVideo(videoIds) ?? []
             await cacheResponse(db, videos, Date.now())
-            console.log('DONE')
         } finally {
             isYouTubeApiSearching = false
         }
@@ -93,7 +101,10 @@ app.get('/api/videos', async (req, res: Response<VideosResponse>) => {
 })
 
 MongoClient.connect('mongodb://mongo:27017', { useUnifiedTopology: true }, (err, client) => {
-    if (err) throw err
+    if (err) {
+        console.log(err)
+        process.exit(1)
+    }
     db = client.db('voms-timeline')
 
     app.listen(80, () => {

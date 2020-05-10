@@ -1,95 +1,52 @@
-import { Video } from '../API/YouTubeApiOptions/VideosAPIOptions'
 import crypto from 'crypto'
 import { parse as parseXml, validate as validateXml } from 'fast-xml-parser'
-import { Request, Response } from 'express'
 import { dotenv } from './dotenv'
 import { channels } from '../config/channels'
 
-export async function websubExpressHandler(req: Request, res: Response): Promise<Video['id']|undefined> {
-    const queryObj = Object.fromEntries(req.originalUrl.split('?')[1]?.split('&').map(it => it.split('=')) ?? [])
+export function obtainVideoIdFromNotification(signature: string, body: string): string|undefined {
+    console.log('Notification')
 
-    const logRequest = async ( { result, reason = '' }: {
-        queryObj?: object,
-        subscribeObject?: object,
-        result: number,
-        rawBody?: string,
-        reason?: string
-    }) => {
-        console.log({
-            url: req.originalUrl,
-            method: req.method,
-            result,
-            reason
-        })
+    if (validateXml(body) !== true) {
+        const error = validateXml(body)
+        console.error('XML syntax error', error)
+        return
     }
 
-    if (queryObj['hub.mode'] == 'subscribe') {
+    const hmacDigest = crypto.createHmac('sha1', dotenv.WEBSUB_HUB_SECRET).update(body).digest('hex')
+    const requestedHmacDigest = signature?.slice('sha1='.length)
+
+    if (hmacDigest != requestedHmacDigest) {
+        console.error('Invalid digest')
+        return
+    }
+
+    const subscribeObject = parseXml(body)
+    const updatedVideoId = subscribeObject.feed?.entry?.['yt:videoId'] as string | undefined
+    console.log('Update notification', updatedVideoId)
+    return updatedVideoId
+}
+
+export function verifySubscription(mode: string, topic: string): boolean {
+    if (mode == 'subscribe') {
         const acceptChannelIds = Object.entries(channels).map(it => it[1])
         const acceptTopics = acceptChannelIds.map(id =>
             ('https://www.youtube.com/xml/feeds/videos.xml?channel_id=' + id)
                 .replace(/\?/g, '%3F')
                 .replace(/\=/g, '%3D')
         )
-
-        if (!acceptTopics.includes(queryObj['hub.topic'])) {
-            res.sendStatus(404)
-            await logRequest({ queryObj, result: 404, reason: 'invalid_hub.topic' })
-            return
+        if (!acceptTopics.includes(topic)) {
+            return false
         }
-
-        const verifyToken = dotenv.WEBSUB_VERIFY_TOKEN
-        if (queryObj['verify_token'] != verifyToken) {
-            res.sendStatus(404)
-            await logRequest({ queryObj, result: 404, reason: 'invalid_verify_token' })
-            return
-        }
-
-        const challenge = queryObj['hub.challenge']
-        res.send(challenge)
-        await logRequest({ queryObj, result: 200 })
-        return
-    } else if (queryObj['hub.mode'] == 'unsubscribe') {
-        res.sendStatus(404)
-        await logRequest({ queryObj, result: 404, reason: 'unsubscribe_forbidden' })
-        return
-    } else if (queryObj['hub.mode'] == 'denied') {
-        res.send()
-        await logRequest({ queryObj, result: 200 })
-        return
+        console.log('Accepted WebSub Verification Request (mode: subscribe)', topic)
+        return true
+    } else if (mode == 'unsubscribe') {
+        console.log('Denied WebSub Verification Request (mode: unsubscribe)')
+        return false
+    } else if (mode == 'denied') {
+        console.log('Accepted WebSub Verification Request (mode: denied)')
+        return true
     }
 
-    if (validateXml(req.body) !== true) {
-        const error = validateXml(req.body)
-        console.error('VALIDATE ERROR', error)
-        res.status(500).send('error')
-        await logRequest({ result: 500, rawBody: req.body, reason: 'invalid_xml' })
-        return
-    }
-
-    const hmacKey = dotenv.WEBSUB_HUB_SECRET
-    const hmacDigest = crypto.createHmac('sha1', hmacKey).update(req.body).digest('hex')
-    const requestedHmacDigest = req.header('x-hub-signature')?.slice('sha1='.length)
-
-    if (hmacDigest != requestedHmacDigest) {
-        console.error('Invalid digest request', 'wants: ' + hmacDigest, 'got: ' + requestedHmacDigest)
-        res.send('ok')
-        await logRequest({ result: 200, rawBody: req.body, reason: 'invalid_digest' })
-        return
-    }
-
-    const verifyToken = dotenv.WEBSUB_VERIFY_TOKEN
-    if (queryObj['verify_token'] != verifyToken) {
-        res.send('ok')
-        await logRequest({ result: 200, rawBody: req.body, reason: 'invalid_verify_token'})
-        return
-    }
-
-    res.send('ok')
-
-    const subscribeObject = parseXml(req.body)
-    const updatedVideoId = subscribeObject.feed?.entry?.['yt:videoId'] as string | undefined
-
-    await logRequest({ subscribeObject, result: 200, rawBody: req.body })
-
-    return updatedVideoId
+    console.log('Denied invalid WebSub Verification Request')
+    return false
 }
