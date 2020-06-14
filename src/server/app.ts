@@ -50,7 +50,7 @@ let isYouTubeApiRenewingVideo: boolean = false
 
 // @ts-ignore: req unused
 app.get('/api/videos', async (req, res: Response<VideosResponse>) => {
-    const { videos, lastUpdated, lastFetch } = await getCached(db)
+    const { videos, lastUpdated, lastFetch } = await getCached(db, 100)
 
     let willSearchVideos = false
     let willRefetchOutdatedVideos = false
