@@ -8,7 +8,7 @@ import '../assets/checkbox_blank.svg'
 
 export const Header: React.FunctionComponent<{ toggleMenu: () => void }> = ({ toggleMenu }) => {
     return <header className='Header'>
-        <div id='menu-hamburger' onClick={ toggleMenu }><img src='./menu.svg'/></div>
+        <div id='menu-hamburger' onClick={ toggleMenu }><img src='./menu.svg' alt='サイドバーのトグルボタン' /></div>
         <Clock />
     </header>
 }

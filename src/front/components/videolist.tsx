@@ -17,7 +17,7 @@ export const VideoList: React.FunctionComponent<{ items: Video[], useRelativeTim
                     target='_blank'
                     rel='noopener'
                 >
-                    <img src={ item.snippet?.thumbnails.high.url } ></img>
+                    <img src={ item.snippet?.thumbnails.high.url } alt="サムネイル画像"></img>
                     <h3>{ item.snippet?.title }</h3>
                     <p>{ getRelativeTimeInString(
                             getVideoTime(item),

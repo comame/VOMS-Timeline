@@ -31,7 +31,7 @@ export function Clock() {
     const secondsStr = seconds < 10 ? '0' + seconds : seconds
 
     return <div className='Clock'>
-        <img src='./clock.svg' />
+        <img src='./clock.svg' alt='時計の文字盤のアイコン' />
         <time dateTime={ currentDate.toISOString()}>{
             `${year}.${month}.${date}(${day}) ${hoursStr}:${minutesStr}:${secondsStr}`
         }</time>
