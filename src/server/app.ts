@@ -3,7 +3,7 @@ import express, { Response } from 'express'
 import { MongoClient, Db } from 'mongodb'
 import { obtainVideoIdFromNotification, verifySubscription } from './websubExpressHandler'
 import { fetchVideo, searchVideos } from './fetchVideo'
-import { cacheResponse, getCached } from './cache'
+import { cacheResponse, getCached, deleteCaches } from './cache'
 import { VideosResponse } from '../API/selfApiOptions/options'
 import { requestSubscription } from './requestSubscription'
 
@@ -94,6 +94,16 @@ app.get('/api/videos', async (req, res: Response<VideosResponse>) => {
             console.log('OUTDATED UPCOMINGS', outdatedUpcomingVideoIds)
             const updatedUpcomingVideos = await fetchVideo(outdatedUpcomingVideoIds) ?? []
             await cacheResponse(db, updatedUpcomingVideos)
+
+            const removedVideoIds: string[] = []
+            for (const cachedId of outdatedUpcomingVideoIds) {
+                if (!updatedUpcomingVideos.map(it => it.id).includes(cachedId)) {
+                    removedVideoIds.push(cachedId)
+                }
+            }
+
+            console.log('CANCELED', removedVideoIds)
+            await deleteCaches(db, removedVideoIds)
         } finally {
             isYouTubeApiRenewingVideo = false
         }

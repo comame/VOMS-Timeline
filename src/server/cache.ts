@@ -14,6 +14,13 @@ interface VideoCache {
     update: number
 }
 
+export async function deleteCaches(db: Db, ids: Video['id'][]) {
+    const collection = db.collection<VideoCache>('videos')
+    await collection.deleteMany({
+        _id: { $in: ids }
+    })
+}
+
 export async function cacheResponse(db: Db, videos: Video[], lastFetch?: number) {
     const metadataCollection: Collection<CacheMeta> = db.collection('metadata')
 
