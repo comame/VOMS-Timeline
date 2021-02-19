@@ -11,13 +11,21 @@ interface VideoCache {
     _id: Video['id'],
     time: number,
     item: Video,
-    update: number
+    update: number,
+    deleted?: boolean
 }
 
 export async function deleteCaches(db: Db, ids: Video['id'][]) {
     const collection = db.collection<VideoCache>('videos')
     await collection.deleteMany({
         _id: { $in: ids }
+    })
+    await collection.updateMany({
+        _id: { $in: ids }
+    }, {
+        $set: {
+            deleted: true
+        }
     })
 }
 
@@ -61,7 +69,9 @@ export async function getCached(db: Db, limit: number = 50): Promise<{
     const videosCollection: Collection<VideoCache> = db.collection('videos')
 
     const cacheMetadata = await metadataCollection.findOne({})
-    const videoCaches = await videosCollection.find()
+    const videoCaches = await videosCollection.find({
+        deleted: false
+    })
         .sort('time', -1)
         .limit(limit)
         .toArray()
