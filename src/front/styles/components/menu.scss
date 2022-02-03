@@ -59,6 +59,16 @@
                 background-color: var(--color-jitomi);
             }
         }
+        &:nth-child(4) {
+            .checked, .unchecked {
+                background-color: var(--color-miuneru);
+            }
+        }
+        &:nth-child(5) {
+            .checked, .unchecked {
+                background-color: var(--color-ryugon);
+            }
+        }
 
         input:checked ~ .unchecked {
             display: none;
