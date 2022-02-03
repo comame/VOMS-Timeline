@@ -18,8 +18,8 @@ interface CacheMeta {
 // TODO: Read from secret
 const db = mysql.createPool({
     host: 'mysql.comame.dev',
-    user: 'root',
-    password: 'test',
+    user: 'voms_timeline',
+    password: process.env.DB_PASS,
     database: 'voms_timeline'
 })
 
