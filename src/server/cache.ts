@@ -1,74 +1,73 @@
-import { Db, Collection } from 'mongodb'
 import { Video } from '../API/YouTubeApiOptions/VideosAPIOptions'
 import { getVideoTime } from '../util/videoTime'
+import mysql from 'mysql'
 
 interface CacheMeta {
+    id: 1,
     lastUpdated: number,
-    lastFetch?: number
+    lastFetch: number
 }
 
-interface VideoCache {
-    _id: Video['id'],
-    time: number,
-    item: Video,
-    update: number
-}
+// interface VideoCache {
+//     _id: Video['id'],
+//     time: number,
+//     item: Video,
+//     update: number
+// }
 
-export async function deleteCaches(db: Db, ids: Video['id'][]) {
-    const collection = db.collection<VideoCache>('videos')
-    await collection.deleteMany({
-        _id: { $in: ids }
+// TODO: Read from secret
+const db = mysql.createPool({
+    host: 'mysql.comame.dev',
+    user: 'root',
+    password: 'test',
+    database: 'voms_timeline'
+})
+
+async function query(query: string, param?: any) {
+    return new Promise((resolve, reject) => {
+        db.query(query, param, (error, result) => {
+            if (error) {
+                reject(error)
+            } else {
+                resolve(result)
+            }
+        })
     })
 }
 
-export async function cacheResponse(db: Db, videos: Video[], lastFetch?: number) {
-    const metadataCollection: Collection<CacheMeta> = db.collection('metadata')
+export async function deleteCaches(ids: Video['id'][]) {
+    await query(`DELETE FROM video WHERE id IN (?)`, ids)
+}
 
-    const metaUpdate = lastFetch ? {
+export async function cacheResponse(videos: Video[], lastFetch?: number) {
+    const metaUpdate: CacheMeta = {
+        id: 1,
         lastUpdated: new Date().getTime(),
-        lastFetch
-    } : {
-        lastUpdated: new Date().getTime()
+        lastFetch: lastFetch ?? 0
     }
 
-    await metadataCollection.updateOne({}, {
-        '$set': metaUpdate
-    }, {
-        upsert: true
-    })
+    await query(`
+    INSERT INTO metadata (id, last_updated, last_fetched) VALUES (?, ?, ?) AS new ON DUPLICATE KEY UPDATE last_updated=new.last_updated, last_fetched=new.last_fetched
+    `, [ metaUpdate.id, metaUpdate.lastUpdated, metaUpdate.lastFetch])
 
-    const videosCollection: Collection<VideoCache> = db.collection('videos')
-    await Promise.all(videos.map(video => videosCollection.updateOne({
-        _id: video.id
-    }, {
-        '$set': {
-            _id: video.id,
-            time: getVideoTime(video).getTime(),
-            item: video,
-            update: Date.now()
-        }
-    }, {
-        upsert: true
-    })))
+    await Promise.all(videos.map(video => query(
+        `INSERT INTO video (id, time, videoJson, updated) VALUES (?, ?, ?, ?) AS new ON DUPLICATE KEY UPDATE time=new.time, videoJson=new.videoJson, updated=new.updated`,
+        [ video.id, getVideoTime(video).getTime(), encodeURIComponent(JSON.stringify(video)), Date.now() ]
+    )))
 }
 
-export async function getCached(db: Db, limit: number = 50): Promise<{
+export async function getCached(limit: number = 50): Promise<{
     lastUpdated: number,
     lastFetch: number,
     videos: Array<{ item: Video, fetched: number }>
 }> {
-    const metadataCollection: Collection<CacheMeta> = db.collection('metadata')
-    const videosCollection: Collection<VideoCache> = db.collection('videos')
 
-    const cacheMetadata = await metadataCollection.findOne({})
-    const videoCaches = await videosCollection.find()
-        .sort('time', -1)
-        .limit(limit)
-        .toArray()
+    const [ cacheMetadata ] = (await query(`SELECT * from metadata`, []) ?? []) as [ any ]
+    const videoCaches = (await query(`SELECT * FROM video ORDER BY time DESC LIMIT ?`, [ limit ]) ?? []) as [ any ]
 
-    const videos = videoCaches.map(it => ({ item: it.item, fetched: it.update }))
-    const lastUpdated = cacheMetadata?.lastUpdated ?? 0
-    const lastFetch = cacheMetadata?.lastFetch ?? 0
+    const videos = videoCaches.map((it: any) => ({ item: JSON.parse(decodeURIComponent(it.videoJson)), fetched: it.updated }))
+    const lastUpdated = cacheMetadata?.last_updated ?? 0
+    const lastFetch = cacheMetadata?.last_fetched ?? 0
 
     return { lastUpdated, lastFetch, videos }
 }

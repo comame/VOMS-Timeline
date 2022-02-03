@@ -48,7 +48,7 @@ export async function searchVideos(): Promise<string[]> {
     )
 
     if (!responses.every(it => isSearchAPIResponse(it))) {
-        console.log(responses)
+        console.log(JSON.stringify(responses, null, 2))
         return []
     }
 

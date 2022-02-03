@@ -1,6 +1,5 @@
 import path from 'path'
 import express, { Response } from 'express'
-import { MongoClient, Db } from 'mongodb'
 import { obtainVideoIdFromNotification, verifySubscription } from './websubExpressHandler'
 import { fetchVideo, searchVideos } from './fetchVideo'
 import { cacheResponse, getCached, deleteCaches } from './cache'
@@ -8,11 +7,9 @@ import { VideosResponse } from '../API/selfApiOptions/options'
 import { requestSubscription } from './requestSubscription'
 
 const app = express()
-let db: Db
 
 // Parse body as string
-// @ts-ignore: res unused
-app.use((req, res, next) => {
+app.use((req, _res, next) => {
     let bodyText = ''
     req.on('data', (chunk: Buffer|string) => {
         if (typeof chunk == 'string') {
@@ -42,15 +39,14 @@ app.post('/sub/hook', async (req, res) => {
     const videoId = obtainVideoIdFromNotification(req.header('x-hub-signature') ?? '', req.body)
     if (!videoId) return
     const videos = await fetchVideo([ videoId ]) ?? []
-    await cacheResponse(db, videos)
+    await cacheResponse(videos)
 })
 
 let isYouTubeApiSearching: boolean = false
 let isYouTubeApiRenewingVideo: boolean = false
 
-// @ts-ignore: req unused
-app.get('/api/videos', async (req, res: Response<VideosResponse>) => {
-    const { videos, lastUpdated, lastFetch } = await getCached(db, 100)
+app.get('/api/videos', async (_req, res: Response<VideosResponse>) => {
+    const { videos, lastUpdated, lastFetch } = await getCached(100)
 
     let willSearchVideos = false
     let willRefetchOutdatedVideos = false
@@ -80,7 +76,7 @@ app.get('/api/videos', async (req, res: Response<VideosResponse>) => {
             console.log('SEARCH VIDEOS')
             const videoIds = await searchVideos()
             const videos = await fetchVideo(videoIds) ?? []
-            await cacheResponse(db, videos, Date.now())
+            await cacheResponse(videos, Date.now())
         } finally {
             isYouTubeApiSearching = false
         }
@@ -93,7 +89,7 @@ app.get('/api/videos', async (req, res: Response<VideosResponse>) => {
         try {
             console.log('OUTDATED UPCOMINGS', outdatedUpcomingVideoIds)
             const updatedUpcomingVideos = await fetchVideo(outdatedUpcomingVideoIds) ?? []
-            await cacheResponse(db, updatedUpcomingVideos)
+            await cacheResponse(updatedUpcomingVideos)
 
             const removedVideoIds: string[] = []
             for (const cachedId of outdatedUpcomingVideoIds) {
@@ -103,21 +99,13 @@ app.get('/api/videos', async (req, res: Response<VideosResponse>) => {
             }
 
             console.log('CANCELED', removedVideoIds)
-            await deleteCaches(db, removedVideoIds)
+            await deleteCaches(removedVideoIds)
         } finally {
             isYouTubeApiRenewingVideo = false
         }
     }
 })
 
-MongoClient.connect('mongodb://mongo:27017', { useUnifiedTopology: true }, (err, client) => {
-    if (err) {
-        console.log(err)
-        process.exit(1)
-    }
-    db = client.db('voms-timeline')
-
-    app.listen(80, () => {
-        console.log('LISTEN')
-    })
+app.listen(process.env.PORT || 80, () => {
+    console.log('LISTEN')
 })

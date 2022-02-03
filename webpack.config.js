@@ -90,6 +90,9 @@ const server = {
         express: 'commonjs express',
         mongodb: 'commonjs mongodb',
         'fast-xml-parser': 'commonjs fast-xml-parser'
+    },
+    optimization: {
+        minimize: false
     }
 }
 
