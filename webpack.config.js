@@ -17,7 +17,8 @@ const frontend = {
     entry: './src/front/app.tsx',
     output: {
         filename: 'app.js',
-        path: __dirname + '/dist/front'
+        path: __dirname + '/dist/front',
+        assetModuleFilename: '[name][ext]'
     },
     module: {
         rules: [{
@@ -46,20 +47,10 @@ const frontend = {
             }]
         }, {
             test: /.html$/,
-            use: [{
-                loader: 'file-loader',
-                options: {
-                    name: '[name].html'
-                }
-            }]
+            type: 'asset/resource'
         }, {
             test: /assets\//,
-            use: [{
-                loader: 'file-loader',
-                options: {
-                    name: '[name].[ext]'
-                }
-            }]
+            type: 'asset/resource'
         }]
     }
 }
