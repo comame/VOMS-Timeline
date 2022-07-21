@@ -1,13 +1,15 @@
 import crypto from 'crypto'
-import { parse as parseXml, validate as validateXml } from 'fast-xml-parser'
+import { XMLParser, XMLValidator } from 'fast-xml-parser'
 import { dotenv } from './dotenv'
 import { channels } from '../config/channels'
 
 export function obtainVideoIdFromNotification(signature: string, body: string): string|undefined {
     console.log('Notification')
 
-    if (validateXml(body) !== true) {
-        const error = validateXml(body)
+    const parser = new XMLParser()
+
+    if (XMLValidator.validate(body) !== true) {
+        const error = XMLValidator.validate(body)
         console.error('XML syntax error', error)
         return
     }
@@ -20,7 +22,7 @@ export function obtainVideoIdFromNotification(signature: string, body: string): 
         return
     }
 
-    const subscribeObject = parseXml(body)
+    const subscribeObject = parser.parse(body)
     const updatedVideoId = subscribeObject.feed?.entry?.['yt:videoId'] as string | undefined
     console.log('Update notification', updatedVideoId)
     return updatedVideoId
